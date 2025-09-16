@@ -15,7 +15,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
         with transaction.atomic():
             project = serializer.save()
             # hacer al creador manager
-            Membership.objects.create(user=self.request.user, project=project, role="manager")
+            Membership.objects.create(user=self.request.user, project=project, role="admin")
 
 class TaskViewSet(viewsets.ModelViewSet):
     queryset = Task.objects.select_related("assigned_to","project").all()

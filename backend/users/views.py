@@ -1,10 +1,10 @@
 # backend/users/views.py
-from rest_framework import generics, viewsets, permissions
+from rest_framework import viewsets, permissions
 from .models import User
-from .serializers import UserSerializer, UserCreateSerializer, UserUpdateSerializer, RegisterSerializer
+from .serializers import UserSerializer, UserCreateSerializer, UserUpdateSerializer
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from .permissions import IsAdmin, IsOwnerOrAdmin
+from core.permissions import IsAdmin, IsOwnerOrAdmin
 
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all().order_by("id")
@@ -31,8 +31,3 @@ class UserViewSet(viewsets.ModelViewSet):
     def me(self, request):
         serializer = UserSerializer(request.user, context={"request": request})
         return Response(serializer.data)
-
-class RegisterView(generics.CreateAPIView):
-    queryset = User.objects.all()
-    permission_classes = [permissions.AllowAny]  # cualquiera puede registrarse
-    serializer_class = RegisterSerializer
