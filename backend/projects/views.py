@@ -37,12 +37,27 @@ class CommentViewSet(viewsets.ModelViewSet):
     serializer_class = CommentSerializer
     permission_classes = [IsAuthenticated, IsProjectAdminOrMemberForUnsafe]
 
+    def get_queryset(self):
+        queryset = Comment.objects.all()
+
+        # 🔎 filtrar por task si se pasa en query param
+        task_id = self.request.query_params.get("task")
+        if task_id:
+            queryset = queryset.filter(task_id=task_id)
+
+        return queryset
+
     def perform_create(self, serializer):
-        # validar que user está asignado a la tarea o es miembro del proyecto
+        # Validar que user está asignado a la tarea o es miembro del proyecto o es admin
         task = serializer.validated_data["task"]
         user = self.request.user
-        if not (task.assigned_to_id == user.id or task.project.members.filter(id=user.id).exists()):
+        
+        print(f"User ID: {user.id}, Role: {user.role}")
+        
+        # Si NO es admin Y NO está asignado Y NO es miembro del proyecto → ERROR
+        if user.role != 'admin' and not (task.assigned_to_id == user.id or task.project.members.filter(id=user.id).exists()):
             raise PermissionDenied("No puedes comentar en esta tarea: no estás asignado ni eres miembro del proyecto.")
+        
         serializer.save(author=user)
 
 class MembershipViewSet(viewsets.ModelViewSet):

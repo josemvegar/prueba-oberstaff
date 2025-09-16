@@ -1,4 +1,5 @@
 "use client"
+
 import { Routes, Route, Navigate } from "react-router-dom"
 import { Box, Container } from "@mui/material"
 import { useAuth } from "./hooks/useAuth"
@@ -9,7 +10,11 @@ import Register from "./pages/Register"
 import ProjectsGrid from "./pages/ProjectsGrid"
 import ProjectDetail from "./pages/ProjectDetail"
 import TaskDetail from "./pages/TaskDetail"
+import CreateProject from "./pages/CreateProject"
+import EditProject from "./pages/EditProject" // Added EditProject import
+import UserManagement from "./pages/UserManagement"
 import ProtectedRoute from "./components/ProtectedRoute"
+import AdminRoute from "./components/AdminRoute"
 import "./App.css"
 
 function App() {
@@ -37,10 +42,26 @@ function App() {
             }
           />
           <Route
+            path="/projects/new"
+            element={
+              <ProtectedRoute>
+                <CreateProject />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/projects/:id"
             element={
               <ProtectedRoute>
                 <ProjectDetail />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/projects/:id/edit"
+            element={
+              <ProtectedRoute>
+                <EditProject />
               </ProtectedRoute>
             }
           />
@@ -50,6 +71,15 @@ function App() {
               <ProtectedRoute>
                 <TaskDetail />
               </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/admin/users"
+            element={
+              <AdminRoute>
+                <UserManagement />
+              </AdminRoute>
             }
           />
 
