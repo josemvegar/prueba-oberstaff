@@ -70,7 +70,7 @@ export default function NavBar() {
             }}
             onClick={handleLogoClick}
           >
-            ProjectHub
+            Prueba JV
           </Typography>
 
           {user ? (
