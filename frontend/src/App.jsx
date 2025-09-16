@@ -1,29 +1,32 @@
-import React from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
-import { Container, CssBaseline } from "@mui/material";
-import NavBar from "./components/NavBar";
-import Footer from "./components/Footer";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
-import ProjectsGrid from "./pages/ProjectsGrid";
-import ProjectDetail from "./pages/ProjectDetail";
-import TaskDetail from "./pages/TaskDetail";
-import ProtectedRoute from "./components/ProtectedRoute";
-import { useAuth } from "./hooks/useAuth";
+"use client"
+import { Routes, Route, Navigate } from "react-router-dom"
+import { Box, Container } from "@mui/material"
+import { useAuth } from "./hooks/useAuth"
+import NavBar from "./components/NavBar"
+import Loading from "./components/Loading"
+import Login from "./pages/Login"
+import Register from "./pages/Register"
+import ProjectsGrid from "./pages/ProjectsGrid"
+import ProjectDetail from "./pages/ProjectDetail"
+import TaskDetail from "./pages/TaskDetail"
+import ProtectedRoute from "./components/ProtectedRoute"
+import "./App.css"
 
-export default function App() {
-  const { isInitialized } = useAuth(); // waits auth init (loads token->me)
+function App() {
+  const { isAuthenticated, isInitialized } = useAuth()
 
-  if (!isInitialized) return null; // or show a loader
+  if (!isInitialized) {
+    return <Loading />
+  }
 
   return (
-    <>
-      <CssBaseline />
-      <NavBar />
-      <Container sx={{ py: 3, minHeight: "70vh" }}>
+    <Box sx={{ minHeight: "100vh", bgcolor: "background.default" }}>
+      {isAuthenticated && <NavBar />}
+
+      <Container maxWidth="lg" sx={{ py: 3 }}>
         <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
+          <Route path="/login" element={isAuthenticated ? <Navigate to="/" replace /> : <Login />} />
+          <Route path="/register" element={isAuthenticated ? <Navigate to="/" replace /> : <Register />} />
 
           <Route
             path="/"
@@ -50,10 +53,11 @@ export default function App() {
             }
           />
 
-          <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="*" element={<Navigate to={isAuthenticated ? "/" : "/login"} replace />} />
         </Routes>
       </Container>
-      <Footer />
-    </>
-  );
+    </Box>
+  )
 }
+
+export default App
