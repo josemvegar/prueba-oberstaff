@@ -1,12 +1,67 @@
 import axios from "axios";
-
-const baseURL = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
+import { logoutLocal } from "./auth";
 
 const api = axios.create({
-  baseURL,
+  baseURL: import.meta.env.VITE_API_URL || "http://localhost:8000/api",
+  timeout: 15000,
 });
 
-export function setAuthToken(token) {
+let isRefreshing = false;
+let failedQueue = [];
+
+const processQueue = (error, token = null) => {
+  failedQueue.forEach(prom => {
+    if (error) prom.reject(error);
+    else prom.resolve(token);
+  });
+  failedQueue = [];
+};
+
+api.interceptors.response.use(
+  res => res,
+  async err => {
+    const originalRequest = err.config;
+    if (!originalRequest) return Promise.reject(err);
+    if (err.response && err.response.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+      const refresh = localStorage.getItem("refresh");
+      if (!refresh) {
+        logoutLocal();
+        return Promise.reject(err);
+      }
+
+      if (isRefreshing) {
+        return new Promise(function (resolve, reject) {
+          failedQueue.push({ resolve, reject });
+        })
+          .then(token => {
+            originalRequest.headers["Authorization"] = "Bearer " + token;
+            return api(originalRequest);
+          })
+          .catch(e => Promise.reject(e));
+      }
+
+      isRefreshing = true;
+      try {
+        const response = await axios.post(`${api.defaults.baseURL.replace(/\/api\/?$/, "/api")}/auth/token/refresh/`, { refresh });
+        const { access } = response.data;
+        localStorage.setItem("access", access);
+        api.defaults.headers.common["Authorization"] = `Bearer ${access}`;
+        processQueue(null, access);
+        return api(originalRequest);
+      } catch (e) {
+        processQueue(e, null);
+        logoutLocal();
+        return Promise.reject(e);
+      } finally {
+        isRefreshing = false;
+      }
+    }
+    return Promise.reject(err);
+  }
+);
+
+export function setAuthHeader(token) {
   if (token) {
     api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
   } else {
