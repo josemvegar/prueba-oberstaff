@@ -62,13 +62,13 @@ export default function TaskForm({ open, onClose, onSuccess, task = null, projec
         projectIdToUse = formData.project_id
       }
 
-      console.log("[v0] Loading project members for project ID:", projectIdToUse)
+  // Cargando los miembros del proyecto para el ID proporcionado
 
       if (projectIdToUse) {
         try {
           const response = await api.get(`/projects/${projectIdToUse}/`)
-          console.log("[v0] Project members loaded:", response.data.members)
-          console.log("[v0] Project data:", response.data)
+          // Miembros del proyecto cargados correctamente
+          // Datos del proyecto obtenidos
           setProjectMembers(response.data.members || [])
 
           if (isEditing && response.data.id) {
@@ -82,6 +82,7 @@ export default function TaskForm({ open, onClose, onSuccess, task = null, projec
           setError("Error al cargar los miembros del proyecto")
         }
       }
+          // Determina si se está editando una tarea existente
     }
 
     if (open) {

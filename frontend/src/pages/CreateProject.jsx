@@ -55,29 +55,29 @@ export default function CreateProject() {
   })
 
   useEffect(() => {
-    console.log("[v0] CreateProject useEffect triggered")
+  // useEffect para cargar usuarios y datos del usuario actual
     const loadData = async () => {
-      console.log("[v0] Starting to load users and current user...")
+  // Inicia la carga de usuarios y usuario actual
       try {
         const currentUserResponse = await api.get("/users/me/")
-        console.log("[v0] Current user from API:", currentUserResponse.data)
+  // Usuario actual obtenido de la API
         setCurrentUser(currentUserResponse.data)
 
         const usersResponse = await api.get("/users/")
-        console.log("[v0] All users from API:", usersResponse.data)
+  // Todos los usuarios obtenidos de la API
 
         const filteredUsers = usersResponse.data.filter((user) => {
           const isNotCurrentUser = user.id !== currentUserResponse.data.id
           console.log(
-            `[v0] Checking user ${user.email}: ID ${user.id} vs current ${currentUserResponse.data.id} - Include: ${isNotCurrentUser}`,
+            // Verificando si el usuario es diferente al usuario actual
           )
           return isNotCurrentUser
         })
 
-        console.log("[v0] Filtered users (excluding current user):", filteredUsers)
+  // Usuarios filtrados (excluyendo el usuario actual)
         setUsers(filteredUsers)
       } catch (err) {
-        console.error("[v0] Error loading data:", err)
+  // Error al cargar los datos
         setError("Error al cargar usuarios")
       }
     }
