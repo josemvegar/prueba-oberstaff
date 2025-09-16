@@ -1,6 +1,6 @@
 # backend/core/permissions.py
-from rest_framework import permissions, request
-from projects.models import Project, Membership, Task, Comment
+from rest_framework import permissions
+from projects.models import Project, Membership, Task
 
 class IsAdmin(permissions.BasePermission):
     def has_permission(self, request, view):
@@ -20,98 +20,49 @@ class IsOwnerOrAdmin(permissions.BasePermission):
 
 class IsProjectAdminOrMemberForUnsafe(permissions.BasePermission):
     """
-    - SAFE_METHODS: miembros del proyecto pueden leer
-    - Unsafe methods: 
-        - Admin: puede hacer TODO
-        - Collaborators: pueden crear/editar pero NO asignar proyectos a otros
-        - Viewers: solo lectura en sus tareas asignadas
+    - Require authentication.
+    - SAFE_METHODS allowed for authenticated members (or even for all authenticated depending),
+    - For unsafe methods (POST/PUT/PATCH/DELETE):
+        - Create project: user.role in ('admin','collab')
+        - Update/Delete project: admin OR membership.role == 'manager'
     """
-    
     def has_permission(self, request, view):
         if not request.user or not request.user.is_authenticated:
             return False
 
-        # Crear proyecto: admin y collaborators pueden crear
         if view.action == "create" and getattr(view, "basename", "") == "project":
             return request.user.role in ("admin", "collab")
-            
+        # other actions permission will be object-level
         return True
 
     def has_object_permission(self, request, view, obj):
-        # ADMINS pueden hacer TODO
+        # obj can be Project, Task or Comment
         if request.user.is_admin():
             return True
 
-        # READ operations (GET, HEAD, OPTIONS)
         if request.method in permissions.SAFE_METHODS:
-            return self._can_read_object(request.user, obj)
+            # allow read to members (and perhaps to other authenticated users as needed)
+            if hasattr(obj, "members"):
+                return obj.members.filter(id=request.user.id).exists()
+            if hasattr(obj, "project"):
+                return obj.project.members.filter(id=request.user.id).exists()
+            return False
 
-        # WRITE operations (POST, PUT, PATCH, DELETE)
-        return self._can_write_object(request.user, obj, request.method)
-
-    def _can_read_object(self, user, obj):
-        """Verifica permisos de lectura según rol y objeto"""
-        # Proyecto: miembros pueden ver
+        # For writing:
+        # If obj is a Project: only admin or project manager can update/delete
         if isinstance(obj, Project):
-            return obj.members.filter(id=user.id).exists()
-            
-        # Tarea: ver si el usuario es miembro del proyecto O tiene la tarea asignada
+            try:
+                membership = obj.membership_set.get(user=request.user)
+                return membership.role == "admin"
+            except Membership.DoesNotExist:
+                return False
+
+        # If obj is Task: allow if user is member and has role collab/manager
         if isinstance(obj, Task):
-            project_member = obj.project.members.filter(id=user.id).exists()
-            assigned_to_me = obj.assigned_to_id == user.id
-            return project_member or assigned_to_me
-            
-        # Comentario: ver si el usuario puede ver la tarea padre
-        if isinstance(obj, Comment):
-            return self._can_read_object(user, obj.task)
-            
-        return False
+            return obj.project.members.filter(id=request.user.id).exists()
 
-    def _can_write_object(self, user, obj, method):
-        """Verifica permisos de escritura según rol y objeto"""
-        # COLLABORATORS y VIEWERS tienen restricciones
-        if user.role == "viewer":
-            return False  # Viewers solo lectura
-            
-        # COLLABORATORS
-        if user.role == "collab":
-            return self._collab_can_write(user, obj, method)
-            
-        return False
-
-    def _collab_can_write(self, user, obj, method):
-        """Permisos específicos para collaborators"""
-        
-        # Crear/Editar Proyecto: solo si es manager del proyecto
-        if isinstance(obj, Project):
-            if method in ["PUT", "PATCH", "DELETE"]:
-                try:
-                    membership = obj.membership_set.get(user=user)
-                    return membership.role == "manager"
-                except Membership.DoesNotExist:
-                    return False
-            return True  # POST de proyectos ya manejado en has_permission
-
-        # Crear/Editar Tarea: miembros del proyecto pueden crear/editar tareas
-        # PERO NO pueden asignar a otros usuarios (solo admins)
-        if isinstance(obj, Task):
-            if method == "POST":
-                return obj.project.members.filter(id=user.id).exists()
-                
-            if method in ["PUT", "PATCH"]:
-                # Collaborators pueden editar pero NO re-asignar a otros
-                if "assigned_to" in request.data and request.data["assigned_to"] != user.id:
-                    return False  # No puede asignar a otros
-                return obj.project.members.filter(id=user.id).exists()
-                
-            if method == "DELETE":
-                return False  # Solo admins pueden eliminar tareas
-
-        # Comentarios: collaborators pueden comentar SOLO en tareas asignadas
-        if isinstance(obj, Comment):
-            if method == "POST":
-                # Solo puede comentar en tareas que le estén asignadas
-                return obj.task.assigned_to_id == user.id
-            return False  # No puede editar/eliminar comentarios
+        # If obj is Comment: allow if user is author or project member
+        if hasattr(obj, "author"):
+            return obj.author_id == request.user.id or obj.task.project.members.filter(id=request.user.id).exists()
 
         return False

@@ -59,3 +59,15 @@ class ProjectSerializer(serializers.ModelSerializer):
             # sincronizar miembros (esta lógica depende de reglas de negocio)
             instance.members.set(members_ids)
         return instance
+
+class MembershipSerializer(serializers.ModelSerializer):
+    user = UserSimpleSerializer(read_only=True)
+    user_id = serializers.PrimaryKeyRelatedField(
+        queryset=User.objects.all(),
+        source="user",
+        write_only=True
+    )
+
+    class Meta:
+        model = Membership
+        fields = ("id", "user", "user_id", "project", "role")

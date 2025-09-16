@@ -1,7 +1,7 @@
 # backend/projects/views.py
 from rest_framework import viewsets, filters
 from .models import Project, Task, Comment, Membership
-from .serializers import ProjectSerializer, TaskSerializer, CommentSerializer
+from .serializers import ProjectSerializer, TaskSerializer, CommentSerializer, MembershipSerializer
 from core.permissions import IsProjectAdminOrMemberForUnsafe
 from rest_framework.permissions import IsAuthenticated
 from django.db import transaction
@@ -44,3 +44,8 @@ class CommentViewSet(viewsets.ModelViewSet):
         if not (task.assigned_to_id == user.id or task.project.members.filter(id=user.id).exists()):
             raise PermissionDenied("No puedes comentar en esta tarea: no estás asignado ni eres miembro del proyecto.")
         serializer.save(author=user)
+
+class MembershipViewSet(viewsets.ModelViewSet):
+    queryset = Membership.objects.select_related("user","project").all()
+    serializer_class = MembershipSerializer
+    permission_classes = [IsAuthenticated, IsProjectAdminOrMemberForUnsafe]
