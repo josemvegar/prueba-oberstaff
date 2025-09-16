@@ -1,5 +1,9 @@
 # Project Management System - Prueba Técnica
 
+## Iniciar Sesión
+- User: admin
+- Pass: 12345678
+
 ## Descripción
 Sistema completo de gestión de proyectos desarrollado como prueba técnica. Plataforma fullstack con backend en Django REST Framework y frontend en React con Material-UI.
 
